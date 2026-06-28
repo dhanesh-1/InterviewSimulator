@@ -1,37 +1,44 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import SpeechInput from '../components/SpeechInput';
-import { speakText, stopSpeaking, getScoreColor, getScoreClass } from '../utils/speechUtils';
-import { FiMic, FiEdit3, FiVolume2, FiVolumeX, FiSend, FiArrowRight, FiCheckCircle, FiHome, FiEye } from 'react-icons/fi';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import ErrorAlert from '../components/ui/ErrorAlert';
+import Badge from '../components/ui/Badge';
+import { speakText, stopSpeaking, getScoreColor } from '../utils/speechUtils';
+import {
+  FiMic, FiEdit3, FiVolume2, FiVolumeX, FiSend, FiArrowRight,
+  FiCheckCircle, FiHome, FiEye,
+} from 'react-icons/fi';
 
 export default function InterviewSession() {
   const { sessionId } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location      = useLocation();
+  const navigate      = useNavigate();
 
-  const [session, setSession] = useState(location.state?.session || null);
-  const [resumeContext, setResumeContext] = useState(location.state?.resumeContext || null);
+  const [session,      setSession]      = useState(location.state?.session || null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answerMode, setAnswerMode] = useState('text'); // 'text' or 'speech'
-  const [answer, setAnswer] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState(null);
-  const [completed, setCompleted] = useState(false);
-  const [finalResult, setFinalResult] = useState(null);
-  const [loading, setLoading] = useState(!location.state?.session);
+  const [answerMode,   setAnswerMode]   = useState('text');
+  const [answer,       setAnswer]       = useState('');
+  const [submitting,   setSubmitting]   = useState(false);
+  const [feedback,     setFeedback]     = useState(null);
+  const [completed,    setCompleted]    = useState(false);
+  const [finalResult,  setFinalResult]  = useState(null);
+  const [loading,      setLoading]      = useState(!location.state?.session);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [submitError,  setSubmitError]  = useState('');
 
-  // Load session if navigated directly
+  const submitRef      = useRef(false);   // prevent duplicate submits
+  const questionRef    = useRef(null);    // for focus management
+
+  // ── Load session if navigated directly ──────────────────────────────────────
   useEffect(() => {
-    if (!session) {
-      loadSession();
-    }
-  }, [sessionId]);
+    if (!session) loadSession();
+  }, [sessionId]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadSession = async () => {
     try {
-      const res = await api.get(`/sessions/${sessionId}`);
+      const res  = await api.get(`/sessions/${sessionId}`);
       const data = res.data;
 
       if (data.status === 'completed') {
@@ -39,22 +46,20 @@ export default function InterviewSession() {
         return;
       }
 
-      // Find first unanswered question
-      const firstUnanswered = data.questions.findIndex(q => !q.userAnswer);
+      const firstUnanswered = data.questions.findIndex((q) => !q.userAnswer);
       setCurrentIndex(firstUnanswered >= 0 ? firstUnanswered : 0);
 
       setSession({
         sessionId: data._id,
-        role: data.role,
+        role:       data.role,
         difficulty: data.difficulty,
-        questions: data.questions.map(q => ({
-          id: q._id,
-          text: q.text,
-          type: q.type,
-          difficulty: q.difficulty
-        }))
+        questions:  data.questions.map((q) => ({
+          id:         q._id,
+          text:       q.text,
+          type:       q.type,
+          difficulty: q.difficulty,
+        })),
       });
-
       setLoading(false);
     } catch (err) {
       console.error('Load session error:', err);
@@ -63,10 +68,12 @@ export default function InterviewSession() {
   };
 
   const currentQuestion = session?.questions?.[currentIndex];
-  const totalQuestions = session?.questions?.length || 0;
-  const progress = totalQuestions > 0 ? ((currentIndex + (feedback ? 1 : 0)) / totalQuestions) * 100 : 0;
+  const totalQuestions  = session?.questions?.length || 0;
+  const progress        = totalQuestions > 0
+    ? ((currentIndex + (feedback ? 1 : 0)) / totalQuestions) * 100
+    : 0;
 
-  // Speak question when it changes
+  // ── Speak question on change ─────────────────────────────────────────────────
   useEffect(() => {
     if (voiceEnabled && currentQuestion && !feedback) {
       speakText(currentQuestion.text);
@@ -74,78 +81,91 @@ export default function InterviewSession() {
     return () => stopSpeaking();
   }, [currentIndex, voiceEnabled, feedback]);
 
-  const handleSpeechTranscript = useCallback((text) => {
-    setAnswer(text);
-  }, []);
+  // ── Focus question card on question change for accessibility ─────────────────
+  useEffect(() => {
+    if (questionRef.current && !loading && !completed) {
+      questionRef.current.focus();
+    }
+  }, [currentIndex, loading, completed]);
 
+  const handleSpeechTranscript = useCallback((text) => setAnswer(text), []);
+
+  // ── Submit answer ────────────────────────────────────────────────────────────
   const handleSubmitAnswer = async () => {
-    if (!answer.trim()) return;
+    if (!answer.trim() || submitRef.current) return;
 
+    submitRef.current = true;
     setSubmitting(true);
+    setSubmitError('');
     stopSpeaking();
 
     try {
       const res = await api.post('/interview/evaluate', {
-        sessionId: session.sessionId,
-        questionId: currentQuestion.id,
-        answer: answer.trim(),
-        answeredVia: answerMode
+        sessionId:   session.sessionId,
+        questionId:  currentQuestion.id,
+        answer:      answer.trim(),
+        answeredVia: answerMode,
       });
-
       setFeedback(res.data.evaluation);
     } catch (err) {
-      console.error('Evaluate error:', err);
-      alert(err.response?.data?.error || 'Failed to evaluate answer. Please try again.');
+      const msg = err.response?.data?.error || 'Failed to evaluate answer. Please try again.';
+      setSubmitError(msg);
     } finally {
       setSubmitting(false);
+      submitRef.current = false;
     }
   };
 
+  // ── Next question ────────────────────────────────────────────────────────────
   const handleNextQuestion = () => {
     setFeedback(null);
     setAnswer('');
+    setSubmitError('');
 
     if (currentIndex + 1 >= totalQuestions) {
       completeSession();
     } else {
-      setCurrentIndex(prev => prev + 1);
+      setCurrentIndex((prev) => prev + 1);
     }
   };
 
+  // ── Complete session ─────────────────────────────────────────────────────────
   const completeSession = async () => {
     try {
-      const res = await api.post('/interview/complete', {
-        sessionId: session.sessionId
-      });
+      const res = await api.post('/interview/complete', { sessionId: session.sessionId });
       setFinalResult(res.data);
       setCompleted(true);
     } catch (err) {
       console.error('Complete session error:', err);
+      setSubmitError('Failed to save your session. Please try again.');
     }
   };
 
+  // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="page-container">
-        <div className="loading-container" style={{ minHeight: '60vh' }}>
-          <div className="spinner"></div>
-          <p className="loading-text">Loading interview session...</p>
-        </div>
+        <LoadingSpinner size="lg" label="Loading interview session..." center />
       </div>
     );
   }
 
-  // Session completed state
+  // ── Session complete screen ──────────────────────────────────────────────────
   if (completed && finalResult) {
+    const strongCount = finalResult.questions?.filter((q) => q.evaluation?.overall >= 7).length || 0;
     return (
       <div className="page-container">
-        <div className="glass-card session-complete" style={{ maxWidth: 600, margin: '3rem auto' }}>
-          <div className="complete-icon">🎉</div>
-          <h1 style={{ fontSize: 'var(--font-3xl)', fontWeight: 700, marginBottom: '0.5rem' }}>Interview Complete!</h1>
-          <div className="complete-score">{finalResult.overallScore?.toFixed(1)}/10</div>
+        <div className="glass-card session-complete" style={{ maxWidth: 600, margin: '3rem auto', textAlign: 'center' }}>
+          <div className="complete-icon" aria-hidden="true">🎉</div>
+          <h1 style={{ fontSize: 'var(--font-3xl)', fontWeight: 700, marginBottom: '0.5rem' }}>
+            Interview Complete!
+          </h1>
+          <div className="complete-score" aria-label={`Overall score: ${finalResult.overallScore?.toFixed(1)} out of 10`}>
+            {finalResult.overallScore?.toFixed(1)}/10
+          </div>
           <div className="complete-label">Overall Score</div>
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', margin: '1.5rem 0' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--font-xl)', fontWeight: 700, color: 'var(--accent-blue)' }}>
                 {finalResult.questions?.length || 0}
@@ -154,7 +174,7 @@ export default function InterviewSession() {
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--font-xl)', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-                {finalResult.questions?.filter(q => q.evaluation?.overall >= 7).length || 0}
+                {strongCount}
               </div>
               <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Strong Answers</div>
             </div>
@@ -162,10 +182,10 @@ export default function InterviewSession() {
 
           <div className="complete-actions">
             <Link to={`/session/${session.sessionId}`} className="btn btn-primary">
-              <FiEye size={18} /> Review Answers
+              <FiEye size={18} aria-hidden="true" /> Review Answers
             </Link>
             <Link to="/dashboard" className="btn btn-secondary">
-              <FiHome size={18} /> Dashboard
+              <FiHome size={18} aria-hidden="true" /> Dashboard
             </Link>
           </div>
         </div>
@@ -175,37 +195,39 @@ export default function InterviewSession() {
 
   return (
     <div className="page-container">
-      {/* Progress */}
-      <div className="interview-progress">
+      {/* ── Progress bar ── */}
+      <div className="interview-progress" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Interview progress">
         <div className="progress-text">
           {session?.role} — Question {currentIndex + 1}/{totalQuestions}
         </div>
         <div className="progress-bar-container">
-          <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+          <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
         </div>
         <button
           className={`btn btn-icon btn-secondary ${voiceEnabled ? 'active' : ''}`}
-          onClick={() => { setVoiceEnabled(!voiceEnabled); stopSpeaking(); }}
-          title={voiceEnabled ? 'Disable voice' : 'Enable voice for questions'}
+          onClick={() => { setVoiceEnabled((v) => !v); stopSpeaking(); }}
+          aria-label={voiceEnabled ? 'Disable voice read-aloud' : 'Enable voice read-aloud'}
           style={voiceEnabled ? { background: 'rgba(59,130,246,0.15)', color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)' } : {}}
+          type="button"
         >
           {voiceEnabled ? <FiVolume2 size={18} /> : <FiVolumeX size={18} />}
         </button>
       </div>
 
       <div className="interview-layout">
-        {/* Question Panel */}
+        {/* ── Question Panel ── */}
         <div className="interview-panel">
-          <div className="glass-card question-card glass-card-accent">
+          <div
+            className="glass-card question-card glass-card-accent"
+            ref={questionRef}
+            tabIndex={-1}
+            aria-label={`Question ${currentIndex + 1}: ${currentQuestion?.text}`}
+          >
             <div className="question-header">
-              <span className="question-number">Q{currentIndex + 1}</span>
+              <span className="question-number" aria-hidden="true">Q{currentIndex + 1}</span>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <span className={`badge badge-${currentQuestion?.type}`}>
-                  {currentQuestion?.type}
-                </span>
-                <span className={`badge badge-${currentQuestion?.difficulty}`}>
-                  {currentQuestion?.difficulty}
-                </span>
+                <Badge variant={currentQuestion?.type}>{currentQuestion?.type}</Badge>
+                <Badge variant={currentQuestion?.difficulty}>{currentQuestion?.difficulty}</Badge>
               </div>
             </div>
             <p className="question-text">{currentQuestion?.text}</p>
@@ -215,30 +237,37 @@ export default function InterviewSession() {
                 <button
                   className="btn btn-sm btn-secondary"
                   onClick={() => speakText(currentQuestion?.text)}
+                  type="button"
+                  aria-label="Read question aloud"
                 >
-                  <FiVolume2 size={14} /> Read Aloud
+                  <FiVolume2 size={14} aria-hidden="true" /> Read Aloud
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Answer Panel */}
+        {/* ── Answer Panel ── */}
         <div className="interview-panel">
           {!feedback ? (
             <div className="glass-card answer-panel" style={{ flex: 1 }}>
-              <div className="answer-mode-toggle">
+              {/* Mode toggle */}
+              <div className="answer-mode-toggle" role="group" aria-label="Answer mode">
                 <button
                   className={`mode-btn ${answerMode === 'text' ? 'active' : ''}`}
                   onClick={() => setAnswerMode('text')}
+                  aria-pressed={answerMode === 'text'}
+                  type="button"
                 >
-                  <FiEdit3 size={16} /> Text
+                  <FiEdit3 size={16} aria-hidden="true" /> Text
                 </button>
                 <button
                   className={`mode-btn ${answerMode === 'speech' ? 'active' : ''}`}
                   onClick={() => setAnswerMode('speech')}
+                  aria-pressed={answerMode === 'speech'}
+                  type="button"
                 >
-                  <FiMic size={16} /> Speech
+                  <FiMic size={16} aria-hidden="true" /> Speech
                 </button>
               </div>
 
@@ -251,6 +280,8 @@ export default function InterviewSession() {
                     onChange={(e) => setAnswer(e.target.value)}
                     disabled={submitting}
                     id="answer-textarea"
+                    aria-label="Your answer"
+                    aria-required="true"
                   />
                 </div>
               ) : (
@@ -262,10 +293,15 @@ export default function InterviewSession() {
               )}
 
               {answerMode === 'speech' && answer && (
-                <div style={{ padding: '0.75rem', background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', color: 'var(--text-secondary)' }}>
+                <div
+                  style={{ padding: '0.75rem', background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', color: 'var(--text-secondary)' }}
+                  aria-live="polite"
+                >
                   <strong style={{ color: 'var(--text-primary)' }}>Captured:</strong> {answer}
                 </div>
               )}
+
+              <ErrorAlert message={submitError} onDismiss={() => setSubmitError('')} />
 
               <div className="answer-actions">
                 <button
@@ -273,35 +309,37 @@ export default function InterviewSession() {
                   onClick={handleSubmitAnswer}
                   disabled={!answer.trim() || submitting}
                   id="submit-answer-btn"
+                  aria-busy={submitting}
+                  type="button"
                 >
                   {submitting ? (
-                    <>
-                      <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }}></div>
-                      Evaluating...
-                    </>
+                    <><LoadingSpinner size="sm" /> Evaluating...</>
                   ) : (
-                    <>
-                      <FiSend size={16} /> Submit Answer
-                    </>
+                    <><FiSend size={16} aria-hidden="true" /> Submit Answer</>
                   )}
                 </button>
               </div>
             </div>
           ) : (
-            /* Inline Feedback */
+            /* ── Inline Feedback ── */
             <div className="glass-card" style={{ flex: 1, animation: 'slideInRight 0.4s ease-out' }}>
               <h3 style={{ fontSize: 'var(--font-xl)', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FiCheckCircle size={20} color="var(--accent-emerald)" /> Evaluation
+                <FiCheckCircle size={20} color="var(--accent-emerald)" aria-hidden="true" /> Evaluation
               </h3>
 
-              <div className="feedback-scores">
+              <div className="feedback-scores" role="list" aria-label="Score breakdown">
                 {[
-                  { label: 'Relevance', value: feedback.relevance },
-                  { label: 'Clarity', value: feedback.clarity },
+                  { label: 'Relevance',  value: feedback.relevance },
+                  { label: 'Clarity',    value: feedback.clarity },
                   { label: 'Confidence', value: feedback.confidence },
-                  { label: 'Overall', value: feedback.overall }
+                  { label: 'Overall',    value: feedback.overall },
                 ].map((score) => (
-                  <div className="score-item" key={score.label}>
+                  <div
+                    key={score.label}
+                    className="score-item"
+                    role="listitem"
+                    aria-label={`${score.label}: ${score.value} out of 10`}
+                  >
                     <div className="score-item-value" style={{ color: getScoreColor(score.value) }}>
                       {score.value}
                     </div>
@@ -318,10 +356,10 @@ export default function InterviewSession() {
               {feedback.suggestions?.length > 0 && (
                 <div className="feedback-text">
                   <h3>💡 Suggestions</h3>
-                  <ul className="suggestions-list">
+                  <ul className="suggestions-list" role="list">
                     {feedback.suggestions.map((sug, i) => (
-                      <li key={i} className="suggestion-item">
-                        <span className="suggestion-icon">→</span>
+                      <li key={i} className="suggestion-item" role="listitem">
+                        <span className="suggestion-icon" aria-hidden="true">→</span>
                         {sug}
                       </li>
                     ))}
@@ -334,12 +372,12 @@ export default function InterviewSession() {
                   className="btn btn-primary"
                   onClick={handleNextQuestion}
                   id="next-question-btn"
+                  type="button"
                 >
-                  {currentIndex + 1 >= totalQuestions ? (
-                    <><FiCheckCircle size={16} /> Finish Interview</>
-                  ) : (
-                    <><FiArrowRight size={16} /> Next Question</>
-                  )}
+                  {currentIndex + 1 >= totalQuestions
+                    ? <><FiCheckCircle size={16} aria-hidden="true" /> Finish Interview</>
+                    : <><FiArrowRight size={16} aria-hidden="true" /> Next Question</>
+                  }
                 </button>
               </div>
             </div>

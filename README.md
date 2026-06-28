@@ -1,4 +1,4 @@
-# 🎙️ AI Interview Simulator
+    # 🎙️ AI Interview Simulator
 
 An intelligent, full-stack web application designed to help job seekers practice and perfect their interview skills. By uploading a resume, candidates participate in a dynamic, voice-enabled interview tailored specifically to their background and the role they are applying for. The application leverages Google's Gemini AI to parse resumes, generate adaptive questions, and provide immediate, actionable feedback on spoken answers.
 

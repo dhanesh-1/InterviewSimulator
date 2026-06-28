@@ -5,6 +5,7 @@ const Resume = require('../models/Resume');
 const User = require('../models/User');
 const { generateQuestions } = require('../services/gemini');
 const { evaluateSingleAnswer, calculateSessionScore, getAdaptiveDifficulty } = require('../services/evaluator');
+const { isTechnicalRole } = require('../utils/validation');
 
 const router = express.Router();
 
@@ -13,18 +14,26 @@ router.post('/start', auth, async (req, res) => {
   try {
     const { resumeId, role, difficulty } = req.body;
 
+    if (!resumeId) {
+      return res.status(400).json({ error: 'Resume is required to start an interview.' });
+    }
+
     if (!role) {
       return res.status(400).json({ error: 'Role is required to start an interview.' });
     }
 
-    // Get resume data
-    let parsedResume = { skills: [], experience: [], education: [], summary: '' };
-    if (resumeId) {
-      const resume = await Resume.findOne({ _id: resumeId, userId: req.userId });
-      if (resume) {
-        parsedResume = resume.parsedData;
-      }
+    if (!isTechnicalRole(role)) {
+      return res.status(400).json({
+        error: 'Please enter a valid technical role (e.g., Software Engineer, Frontend Developer, Backend Developer, Full Stack Developer, Data Scientist, DevOps Engineer, QA Engineer, Cybersecurity Engineer, AI/ML Engineer, Cloud Engineer, Mobile Developer, UI/UX Developer, Data Engineer, SRE, Product Engineer).'
+      });
     }
+
+    // Get resume data
+    const resume = await Resume.findOne({ _id: resumeId, userId: req.userId });
+    if (!resume) {
+      return res.status(400).json({ error: 'Valid resume is required to start an interview.' });
+    }
+    const parsedResume = resume.parsedData;
 
     // Get previous performance for adaptive difficulty
     let previousPerformance = null;

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiMail, FiLock } from 'react-icons/fi';
+import ErrorAlert from '../components/ui/ErrorAlert';
+import { FiMail, FiLock, FiArrowLeft } from 'react-icons/fi';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]   = useState(false);
   const { login, error, clearError } = useAuth();
   const navigate = useNavigate();
 
@@ -20,16 +21,31 @@ export default function Login() {
 
   return (
     <div className="auth-page">
-      <div className="animated-bg"></div>
+      <div className="animated-bg" />
       <div className="auth-card">
+        {/* Back to home */}
+        <Link to="/" className="auth-back-link" aria-label="Back to home page">
+          <FiArrowLeft size={14} /> Back to Home
+        </Link>
+
+        <div className="auth-logo" aria-hidden="true">🎯</div>
         <div className="auth-header">
           <h1>Welcome Back</h1>
           <p>Sign in to continue your interview preparation</p>
         </div>
 
-        {error && <div className="auth-error">{error}</div>}
+        <ErrorAlert
+          message={error}
+          onDismiss={clearError}
+          style={{ marginBottom: '1.25rem' }}
+        />
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form
+          className="auth-form"
+          onSubmit={handleSubmit}
+          noValidate
+          aria-label="Login form"
+        >
           <div className="form-group">
             <label className="form-label" htmlFor="login-email">
               <FiMail size={14} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} />
@@ -44,6 +60,8 @@ export default function Login() {
               onChange={(e) => { setEmail(e.target.value); clearError(); }}
               required
               autoComplete="email"
+              aria-required="true"
+              aria-describedby={error ? 'login-error' : undefined}
             />
           </div>
 
@@ -62,21 +80,24 @@ export default function Login() {
               required
               minLength={6}
               autoComplete="current-password"
+              aria-required="true"
             />
           </div>
 
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={loading}
+            disabled={loading || !email || !password}
             id="login-submit-btn"
+            aria-busy={loading}
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <div className="auth-footer">
-          Don't have an account? <Link to="/signup">Create one</Link>
+          Don&apos;t have an account?{' '}
+          <Link to="/signup" aria-label="Create a new account">Create one</Link>
         </div>
       </div>
     </div>
