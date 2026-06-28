@@ -3,7 +3,7 @@ const auth = require('../middleware/auth');
 const Session = require('../models/Session');
 const Resume = require('../models/Resume');
 const User = require('../models/User');
-const { generateQuestions } = require('../services/gemini');
+const { generateQuestions } = require('../services/openai');
 const { evaluateSingleAnswer, calculateSessionScore, getAdaptiveDifficulty } = require('../services/evaluator');
 const { isTechnicalRole } = require('../utils/validation');
 
@@ -49,7 +49,7 @@ router.post('/start', auth, async (req, res) => {
       }
     }
 
-    // Generate questions via Gemini
+    // Generate questions via AI
     const questions = await generateQuestions(parsedResume, role, difficulty || 'medium', previousPerformance);
 
     // Create session

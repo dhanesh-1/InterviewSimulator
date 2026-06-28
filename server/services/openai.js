@@ -1,7 +1,29 @@
-const { GoogleGenAI } = require('@google/genai');
+const OpenAI = require('openai');
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const MODEL = 'gpt-5.4-mini';
+let client;
+
+function getClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is required. Please add your OpenAI API key to server/.env.');
+  }
+
+  if (!client) {
+    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+
+  return client;
+}
+
+async function generateText(prompt) {
+  const response = await getClient().responses.create({
+    model: MODEL,
+    input: prompt
+  });
+
+  return (response.output_text || '').trim();
+}
 
 /**
  * Generate interview questions based on parsed resume data
@@ -44,12 +66,7 @@ Return ONLY a valid JSON array with this exact format (no markdown, no extra tex
 ]`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
-
-    let text = response.text.trim();
+    let text = await generateText(prompt);
     const startIndex = text.indexOf('[');
     const endIndex = text.lastIndexOf(']');
     if (startIndex !== -1 && endIndex !== -1) {
@@ -62,7 +79,7 @@ Return ONLY a valid JSON array with this exact format (no markdown, no extra tex
     if (error.status === 429) {
       throw new Error('API Quota Exceeded. Please try again soon.');
     }
-    console.error('Gemini generateQuestions error:', error);
+    console.error('OpenAI generateQuestions error:', error);
     throw new Error('Failed to generate interview questions. Please try again.');
   }
 }
@@ -99,12 +116,7 @@ Return ONLY a valid JSON object with this exact format (no markdown, no extra te
 }`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
-
-    let text = response.text.trim();
+    let text = await generateText(prompt);
     const startIndex = text.indexOf('{');
     const endIndex = text.lastIndexOf('}');
     if (startIndex !== -1 && endIndex !== -1) {
@@ -117,13 +129,13 @@ Return ONLY a valid JSON object with this exact format (no markdown, no extra te
     if (error.status === 429) {
       throw new Error('API Quota Exceeded. Please wait 1 minute before trying again.');
     }
-    console.error('Gemini evaluateAnswer error:', error);
+    console.error('OpenAI evaluateAnswer error:', error);
     throw new Error('Failed to evaluate answer. Please try again.');
   }
 }
 
 /**
- * Parse resume raw text into structured data using Gemini
+ * Parse resume raw text into structured data using AI
  */
 async function parseResumeWithAI(rawText) {
   const prompt = `You are an expert resume parser. Extract structured information from the following resume text.
@@ -159,12 +171,7 @@ Extract and return ONLY a valid JSON object with this exact format (no markdown,
 If any section is not found in the resume, use empty arrays or empty strings. Be thorough in extracting skills - include both technical and soft skills mentioned anywhere in the resume.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
-
-    let text = response.text.trim();
+    let text = await generateText(prompt);
     const startIndex = text.indexOf('{');
     const endIndex = text.lastIndexOf('}');
     if (startIndex !== -1 && endIndex !== -1) {
@@ -177,7 +184,7 @@ If any section is not found in the resume, use empty arrays or empty strings. Be
     if (error.status === 429) {
       throw new Error('API Quota Exceeded. Please wait 1 minute before trying again.');
     }
-    console.error('Gemini parseResume error:', error);
+    console.error('OpenAI parseResume error:', error);
     throw new Error('Failed to parse resume with AI. Please try again.');
   }
 }

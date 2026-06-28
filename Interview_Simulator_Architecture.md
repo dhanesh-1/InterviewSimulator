@@ -13,11 +13,11 @@ This document provides an overview of the tools, libraries, and methodologies us
 ## 2. Invalid or Random Document Handling
 If a user uploads a completely random PDF document or an image-based PDF where no text is found, it is handled securely through the following layered mechanism:
 - **Length Check:** If the extracted text is severely short (less than 50 characters) or unreadable, the backend throws an initial error ("Could not extract enough text").
-- **AI Validation (isResume Flag):** We explicitly instruct the Gemini LLM parser to evaluate the unstructured text first. It is passed an instruction to set an `isResume` boolean extraction flag. If the provided document text is missing recognizable professional sections, random garble, or completely distinct from a resume format, the LLM safely flags `isResume = false`. The API detects this and aborts the request securely, returning: *"Uploaded file does not appear to be a valid resume. Please upload a real resume."*
+- **AI Validation (isResume Flag):** We explicitly instruct the OpenAI parser to evaluate the unstructured text first. It is passed an instruction to set an `isResume` boolean extraction flag. If the provided document text is missing recognizable professional sections, random garble, or completely distinct from a resume format, the model safely flags `isResume = false`. The API detects this and aborts the request securely, returning: *"Uploaded file does not appear to be a valid resume. Please upload a real resume."*
 
 ## 3. Generative AI Integration
-- **Platform:** Google Gemini API via the official `@google/genai` Node.js SDK.
-- **Model Used:** `gemini-2.5-flash`, favored for its extremely low latency and fast parsing capabilities necessary for interactive tools.
+- **Platform:** OpenAI API via the official `openai` Node.js SDK.
+- **Model Used:** `gpt-5.4-mini`, favored for fast, low-cost responses necessary for interactive tools.
 - **Use Cases:**
   1. **Resume Parsing:** Structures the unstructured resume text into JSON objects holding `skills`, `experience`, and `education`.
   2. **Question Generation:** Dynamically formulates a mix of 6 technical, behavioral, HR, and situational questions tailored perfectly to the candidate's skills and the specific job role string.

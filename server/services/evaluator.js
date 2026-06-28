@@ -1,4 +1,4 @@
-const { evaluateAnswer } = require('./gemini');
+const { evaluateAnswer } = require('./openai');
 
 /**
  * Evaluate a single answer and return normalized scores

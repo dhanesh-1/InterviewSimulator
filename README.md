@@ -1,11 +1,11 @@
     # 🎙️ AI Interview Simulator
 
-An intelligent, full-stack web application designed to help job seekers practice and perfect their interview skills. By uploading a resume, candidates participate in a dynamic, voice-enabled interview tailored specifically to their background and the role they are applying for. The application leverages Google's Gemini AI to parse resumes, generate adaptive questions, and provide immediate, actionable feedback on spoken answers.
+An intelligent, full-stack web application designed to help job seekers practice and perfect their interview skills. By uploading a resume, candidates participate in a dynamic, voice-enabled interview tailored specifically to their background and the role they are applying for. The application leverages OpenAI to parse resumes, generate adaptive questions, and provide immediate, actionable feedback on spoken answers.
 
 ## ✨ Features
 
 - **📄 Smart Resume Parsing:** Upload your PDF or DOCX resume. The platform extracts your skills, experience, and education using AI. Includes built-in validation to reject non-resume documents.
-- **🤖 Tailored Question Generation:** Utilizing the `gemini-2.5-flash` model, the app dynamically constructs a customized set of Behavioral, Technical, HR, and Situational questions based on your unique profile and chosen difficulty.
+- **🤖 Tailored Question Generation:** Utilizing the `gpt-5.4-mini` model, the app dynamically constructs a customized set of Behavioral, Technical, HR, and Situational questions based on your unique profile and chosen difficulty.
 - **🗣️ Voice-Interactive Interface:**
   - **Text-to-Speech (TTS):** The AI "speaks" the interview questions to you out loud for a realistic experience (using native Browser Speech Synthesis).
   - **Speech-to-Text (STT):** Answer questions using your microphone! A robust, continuously-accumulating speech recognition engine captures your full response accurately.
@@ -23,7 +23,7 @@ An intelligent, full-stack web application designed to help job seekers practice
 **Backend**
 - **Node.js** & **Express.js** providing a robust RESTful API.
 - **MongoDB** (with Mongoose) for persistent storage of user profiles, resumes, and interview evaluations.
-- **@google/genai SDK** to interface with Google's Gemini LLMs.
+- **OpenAI Node SDK** to interface with OpenAI models.
 - `multer`, `pdf-parse`, and `mammoth` for handling secure multi-part document uploads and text extraction.
 
 ## 🚀 Getting Started
@@ -32,7 +32,7 @@ An intelligent, full-stack web application designed to help job seekers practice
 Make sure you have the following installed on your machine:
 - Node.js (v16+)
 - A MongoDB cluster/database (Local or MongoDB Atlas)
-- A Google Gemini API Key
+- An OpenAI API key
 
 ### 1. Environment Setup
 Create a `.env` file inside the `server/` directory and add the following variables:
@@ -40,7 +40,7 @@ Create a `.env` file inside the `server/` directory and add the following variab
 PORT=5000
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_super_secret_jwt_key
-GEMINI_API_KEY=your_google_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
 ```
 
 ### 2. Backend Installation

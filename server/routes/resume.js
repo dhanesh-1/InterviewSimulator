@@ -4,7 +4,7 @@ const path = require('path');
 const auth = require('../middleware/auth');
 const Resume = require('../models/Resume');
 const { extractText, cleanupFile } = require('../services/resumeParser');
-const { parseResumeWithAI } = require('../services/gemini');
+const { parseResumeWithAI } = require('../services/openai');
 
 const router = express.Router();
 
@@ -57,7 +57,7 @@ router.post('/upload', auth, upload.single('resume'), async (req, res) => {
       return res.status(400).json({ error: 'Could not extract enough text from the file. Please upload a valid resume.' });
     }
 
-    // Step 2: Parse with Gemini AI
+    // Step 2: Parse with AI
     const parsedData = await parseResumeWithAI(rawText);
 
     if (parsedData.isResume === false) {

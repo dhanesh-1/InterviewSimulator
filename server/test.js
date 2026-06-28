@@ -1,4 +1,4 @@
-const { parseResumeWithAI } = require('./services/gemini');
+const { parseResumeWithAI } = require('./services/openai');
 
 async function test() {
   try {

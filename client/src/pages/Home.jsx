@@ -20,7 +20,7 @@ const FEATURES = [
   {
     icon: <FiZap size={24} />,
     title: 'AI-Powered Questions',
-    description: 'Gemini AI generates personalised technical questions tailored to your resume and target role.',
+    description: 'OpenAI generates personalised technical questions tailored to your resume and target role.',
     color: 'blue',
   },
   {
@@ -79,7 +79,7 @@ const STEPS = [
 const WHY_ITEMS = [
   { icon: <FiCheckCircle size={20} />, text: 'Only for technical & software roles — no irrelevant practice' },
   { icon: <FiShield size={20} />, text: 'Private & secure — your resume and data stay with you' },
-  { icon: <FiZap size={20} />, text: 'Gemini AI feedback in seconds, not days' },
+  { icon: <FiZap size={20} />, text: 'OpenAI feedback in seconds, not days' },
   { icon: <FiUsers size={20} />, text: 'Trusted by engineers preparing for FAANG-level interviews' },
   { icon: <FiStar size={20} />, text: 'Adaptive difficulty that evolves with your progress' },
   { icon: <FiCode size={20} />, text: 'Questions tailored to your exact tech stack and experience' },
@@ -115,7 +115,7 @@ export default function Home() {
         <div className="hero-content">
           <div className="hero-badge" role="note">
             <FiZap size={14} />
-            <span>Powered by Gemini AI</span>
+            <span>Powered by OpenAI</span>
           </div>
 
           <h1 className="hero-headline" id="hero-headline">

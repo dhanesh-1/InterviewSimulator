@@ -50,7 +50,7 @@ To explain the technology powering this experience, I’ll pass it to [Speaker 3
 *   **On the Backend**, we constructed a robust RESTful API using **Node.js** and **Express**, with **MongoDB** acting as our persistent database for storing user profiles, parsed resumes, and evaluation history securely."
 
 **[Speaker 3 - The AI Integration]**
-"The true engine of our simulator is our integration with Google’s Gemini API using the `@google/genai` SDK. We actively prompt the fast `gemini-2.5-flash` model to act as a strict but helpful interviewer—powering the resume parsing, the dynamic question generation, and the real-time scoring system."
+"The true engine of our simulator is our integration with OpenAI using the official Node SDK. We actively prompt the fast `gpt-5.4-mini` model to act as a strict but helpful interviewer—powering the resume parsing, the dynamic question generation, and the real-time scoring system."
 
 **[Speaker 3 - Conclusion & Future]**
 "In conclusion, the **AI Interview Simulator** transforms the solitary, frustrating act of interview prep into an interactive, feedback-rich loop. Looking ahead, our next steps include adding video-based emotion tracking and integrating live job board API data to generate questions for specific, real-world job postings. 
