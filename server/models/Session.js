@@ -9,6 +9,18 @@ const evaluationSchema = new mongoose.Schema({
   suggestions: [String]
 }, { _id: false });
 
+const answerVersionSchema = new mongoose.Schema({
+  versionNumber: { type: Number, required: true, min: 1 },
+  answer: { type: String, required: true, default: '' },
+  answeredVia: {
+    type: String,
+    enum: ['text', 'speech', ''],
+    default: ''
+  },
+  evaluation: { type: evaluationSchema, default: () => ({}) },
+  answeredAt: { type: Date, default: Date.now }
+}, { _id: true });
+
 const questionSchema = new mongoose.Schema({
   text: { type: String, required: true },
   type: {
@@ -28,7 +40,8 @@ const questionSchema = new mongoose.Schema({
     default: ''
   },
   evaluation: { type: evaluationSchema, default: () => ({}) },
-  answeredAt: Date
+  answeredAt: Date,
+  answerVersions: [answerVersionSchema]
 }, { _id: true });
 
 const sessionSchema = new mongoose.Schema({
