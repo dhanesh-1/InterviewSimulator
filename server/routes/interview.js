@@ -7,6 +7,7 @@ const Application = require('../models/Application');
 const { generateQuestions } = require('../services/openai');
 const { evaluateSingleAnswer, calculateSessionScore, getAdaptiveDifficulty } = require('../services/evaluator');
 const { isTechnicalRole } = require('../utils/validation');
+const { getNextVersionNumber, shouldCreateRevision } = require('../utils/answerVersioning');
 
 const router = express.Router();
 
@@ -116,18 +117,59 @@ router.post('/evaluate', auth, async (req, res) => {
     // Evaluate with AI
     const evaluation = await evaluateSingleAnswer(question, answer, resumeContext);
 
+    const hasExistingAnswer = Boolean(question.userAnswer && question.userAnswer.trim());
+    const shouldStoreRevision = shouldCreateRevision({
+      sessionStatus: session.status,
+      question,
+      hasExistingAnswer
+    });
+
+    if (!Array.isArray(question.answerVersions) || question.answerVersions.length === 0) {
+      const baseAnswer = hasExistingAnswer ? question.userAnswer : answer;
+      const baseEvaluation = hasExistingAnswer ? question.evaluation : evaluation;
+      const baseVia = hasExistingAnswer ? (question.answeredVia || 'text') : (answeredVia || 'text');
+      const baseAnsweredAt = hasExistingAnswer ? (question.answeredAt || new Date()) : new Date();
+
+      question.answerVersions = [{
+        versionNumber: 1,
+        answer: baseAnswer,
+        answeredVia: baseVia,
+        evaluation: baseEvaluation,
+        answeredAt: baseAnsweredAt
+      }];
+    }
+
+    let newVersionNumber = 1;
+    if (shouldStoreRevision) {
+      newVersionNumber = getNextVersionNumber(question);
+      question.answerVersions.push({
+        versionNumber: newVersionNumber,
+        answer,
+        answeredVia: answeredVia || 'text',
+        evaluation,
+        answeredAt: new Date()
+      });
+    }
+
     // Update question in session
     question.userAnswer = answer;
     question.answeredVia = answeredVia || 'text';
     question.evaluation = evaluation;
     question.answeredAt = new Date();
 
+    if (session.status === 'completed') {
+      session.overallScore = calculateSessionScore(session.questions);
+    }
+
     await session.save();
 
     res.json({
       questionId,
       evaluation,
-      answeredVia: question.answeredVia
+      answeredVia: question.answeredVia,
+      versionNumber: newVersionNumber,
+      answerVersions: question.answerVersions,
+      overallScore: session.overallScore
     });
   } catch (error) {
     console.error('Evaluate answer error:', error);

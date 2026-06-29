@@ -4,13 +4,18 @@ import api from '../utils/api';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import ScoreCircle from '../components/ui/ScoreCircle';
 import Badge from '../components/ui/Badge';
+import SpeechInput from '../components/SpeechInput';
 import { formatDate, getScoreColor } from '../utils/speechUtils';
-import { FiArrowLeft, FiClock, FiSearch, FiMic, FiEdit3 } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiSearch, FiMic, FiEdit3, FiSend, FiType, FiX } from 'react-icons/fi';
 
 export default function SessionReview() {
   const { sessionId } = useParams();
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [draftAnswers, setDraftAnswers] = useState({});
+  const [revisionModes, setRevisionModes] = useState({});
+  const [activeRevisionQuestion, setActiveRevisionQuestion] = useState(null);
+  const [submittingQuestionId, setSubmittingQuestionId] = useState(null);
 
   useEffect(() => { loadSession(); }, [sessionId]);
 
@@ -18,10 +23,50 @@ export default function SessionReview() {
     try {
       const res = await api.get(`/sessions/${sessionId}`);
       setSession(res.data);
+      if (res.data?.questions) {
+        const initialDrafts = Object.fromEntries(res.data.questions.map((q) => [q._id, q.userAnswer || '']));
+        setDraftAnswers(initialDrafts);
+      }
     } catch (err) {
       console.error('Load session error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openRevisionModal = (question) => {
+    setActiveRevisionQuestion(question);
+    setRevisionModes((prev) => ({ ...prev, [question._id]: prev[question._id] || 'text' }));
+    setDraftAnswers((prev) => ({ ...prev, [question._id]: prev[question._id] || question.userAnswer || '' }));
+  };
+
+  const closeRevisionModal = () => {
+    setActiveRevisionQuestion(null);
+  };
+
+  const handleSubmitRevision = async () => {
+    if (!activeRevisionQuestion) return;
+
+    const questionId = activeRevisionQuestion._id;
+    const answer = (draftAnswers[questionId] || '').trim();
+    if (!answer) return;
+
+    const answeredVia = revisionModes[questionId] === 'speech' ? 'speech' : 'text';
+
+    setSubmittingQuestionId(questionId);
+    try {
+      await api.post('/interview/evaluate', {
+        sessionId,
+        questionId,
+        answer,
+        answeredVia
+      });
+      await loadSession();
+      closeRevisionModal();
+    } catch (err) {
+      console.error('Submit revision error:', err);
+    } finally {
+      setSubmittingQuestionId(null);
     }
   };
 
@@ -127,6 +172,32 @@ export default function SessionReview() {
                   <p>{q.userAnswer}</p>
                 </div>
 
+                {session.status === 'completed' && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => openRevisionModal(q)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <FiSend size={14} aria-hidden="true" />
+                      Re-evaluate Answer
+                    </button>
+                  </div>
+                )}
+
+                {q.answerVersions?.length > 0 && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <div className="review-answer-label">Version History</div>
+                    <ul style={{ marginTop: '0.5rem', paddingLeft: '1.2rem', color: 'var(--text-muted)', fontSize: 'var(--font-sm)' }}>
+                      {[...q.answerVersions].sort((a, b) => (a.versionNumber || 0) - (b.versionNumber || 0)).map((version) => (
+                        <li key={`${version.versionNumber}-${version.answeredAt || version.answer}`} style={{ marginBottom: '0.4rem' }}>
+                          <strong>Version {version.versionNumber}</strong> · {formatDate(version.answeredAt)} · Score {version.evaluation?.overall ?? 0}/10
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {q.evaluation && (
                   <>
                     <div className="review-scores-inline" role="list" aria-label="Score breakdown">
@@ -174,6 +245,91 @@ export default function SessionReview() {
           </div>
         ))}
       </div>
+
+      {activeRevisionQuestion && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(4, 12, 24, 0.72)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            zIndex: 1000
+          }}
+          onClick={closeRevisionModal}
+        >
+          <div
+            className="glass-card"
+            style={{ width: '100%', maxWidth: '640px', padding: '1.5rem', position: 'relative' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={closeRevisionModal}
+              style={{ position: 'absolute', right: '1rem', top: '1rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              aria-label="Close revision modal"
+            >
+              <FiX size={14} aria-hidden="true" />
+            </button>
+
+            <div className="review-answer-label" style={{ marginBottom: '0.5rem' }}>Re-evaluate your answer</div>
+            <div style={{ fontSize: 'var(--font-sm)', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              {activeRevisionQuestion.text}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <button
+                className={`btn btn-sm ${revisionModes[activeRevisionQuestion._id] === 'text' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setRevisionModes((prev) => ({ ...prev, [activeRevisionQuestion._id]: 'text' }))}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <FiType size={14} aria-hidden="true" /> Text
+              </button>
+              <button
+                className={`btn btn-sm ${revisionModes[activeRevisionQuestion._id] === 'speech' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setRevisionModes((prev) => ({ ...prev, [activeRevisionQuestion._id]: 'speech' }))}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <FiMic size={14} aria-hidden="true" /> Voice
+              </button>
+            </div>
+
+            {revisionModes[activeRevisionQuestion._id] === 'speech' ? (
+              <div className="review-answer" style={{ padding: '1rem' }}>
+                <SpeechInput
+                  onTranscript={(text) => setDraftAnswers((prev) => ({ ...prev, [activeRevisionQuestion._id]: text }))}
+                  disabled={submittingQuestionId === activeRevisionQuestion._id}
+                  initialTranscript={draftAnswers[activeRevisionQuestion._id] || ''}
+                />
+              </div>
+            ) : (
+              <textarea
+                value={draftAnswers[activeRevisionQuestion._id] || ''}
+                onChange={(e) => setDraftAnswers((prev) => ({ ...prev, [activeRevisionQuestion._id]: e.target.value }))}
+                rows={8}
+                style={{ width: '100%', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.15)', padding: '0.9rem', background: 'rgba(255,255,255,0.04)', color: 'var(--text-primary)', resize: 'vertical' }}
+                placeholder="Type your revised answer here..."
+              />
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+              <button className="btn btn-secondary btn-sm" onClick={closeRevisionModal}>Cancel</button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleSubmitRevision}
+                disabled={!draftAnswers[activeRevisionQuestion._id]?.trim() || submittingQuestionId === activeRevisionQuestion._id}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <FiSend size={14} aria-hidden="true" />
+                {submittingQuestionId === activeRevisionQuestion._id ? 'Submitting...' : 'Submit Re-evaluation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
