@@ -56,6 +56,12 @@ export function AuthProvider({ children }) {
     if (token) {
       api.get('/auth/me')
         .then(res => {
+          if (res.data.role === 'recruiter') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            dispatch({ type: 'AUTH_ERROR', payload: 'Access denied. Please use the Recruiter Portal at http://localhost:5174.' });
+            return;
+          }
           dispatch({
             type: 'LOGIN_SUCCESS',
             payload: { user: res.data, token }
@@ -75,6 +81,10 @@ export function AuthProvider({ children }) {
     try {
       dispatch({ type: 'CLEAR_ERROR' });
       const res = await api.post('/auth/login', { email, password });
+      if (res.data.user?.role === 'recruiter') {
+        dispatch({ type: 'AUTH_ERROR', payload: 'Access denied. Please use the Recruiter Portal at http://localhost:5174.' });
+        return false;
+      }
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       dispatch({ type: 'LOGIN_SUCCESS', payload: res.data });
@@ -86,10 +96,10 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signup = async (name, email, password) => {
+  const signup = async (name, email, password, role = 'candidate', company = '') => {
     try {
       dispatch({ type: 'CLEAR_ERROR' });
-      const res = await api.post('/auth/signup', { name, email, password });
+      const res = await api.post('/auth/signup', { name, email, password, role, company });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       dispatch({ type: 'LOGIN_SUCCESS', payload: res.data });
@@ -115,6 +125,10 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'UPDATE_USER', payload: data });
   };
 
+  // Convenience computed values
+  const isRecruiter = state.user?.role === 'recruiter';
+  const isCandidate = state.user?.role === 'candidate' || (!state.user?.role && !!state.user);
+
   return (
     <AuthContext.Provider value={{
       ...state,
@@ -122,7 +136,9 @@ export function AuthProvider({ children }) {
       signup,
       logout,
       clearError,
-      updateUser
+      updateUser,
+      isRecruiter,
+      isCandidate
     }}>
       {children}
     </AuthContext.Provider>

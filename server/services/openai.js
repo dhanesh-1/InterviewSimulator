@@ -28,7 +28,7 @@ async function generateText(prompt) {
 /**
  * Generate interview questions based on parsed resume data
  */
-async function generateQuestions(parsedResume, role, difficulty, previousPerformance = null) {
+async function generateQuestions(parsedResume, role, difficulty, previousPerformance = null, jobDescription = null) {
   let difficultyInstruction = '';
   if (difficulty === 'adaptive' && previousPerformance) {
     const avgScore = previousPerformance.averageScore || 5;
@@ -39,6 +39,10 @@ async function generateQuestions(parsedResume, role, difficulty, previousPerform
     difficultyInstruction = `Generate ${(difficulty || 'medium').toUpperCase()} difficulty questions.`;
   }
 
+  const jobContext = jobDescription
+    ? `\nJOB DESCRIPTION (Questions MUST specifically test whether the candidate can fulfill this role):\n${jobDescription.substring(0, 2000)}`
+    : '';
+
   const prompt = `You are an expert interview coach. Based on the following candidate profile, generate exactly 6 interview questions for the role of "${role}".
 
 CANDIDATE PROFILE:
@@ -46,6 +50,7 @@ CANDIDATE PROFILE:
 - Experience: ${parsedResume.experience?.map(e => `${e.title} at ${e.company} (${e.duration})`).join('; ') || 'Not specified'}
 - Education: ${parsedResume.education?.map(e => `${e.degree} from ${e.institution}`).join('; ') || 'Not specified'}
 - Summary: ${parsedResume.summary || 'Not specified'}
+${jobContext}
 
 INSTRUCTIONS:
 ${difficultyInstruction}
@@ -72,7 +77,6 @@ Return ONLY a valid JSON array with this exact format (no markdown, no extra tex
     if (startIndex !== -1 && endIndex !== -1) {
       text = text.substring(startIndex, endIndex + 1);
     }
-    
     const questions = JSON.parse(text);
     return questions;
   } catch (error) {
@@ -80,7 +84,16 @@ Return ONLY a valid JSON array with this exact format (no markdown, no extra tex
       throw new Error('API Quota Exceeded. Please try again soon.');
     }
     console.error('OpenAI generateQuestions error:', error);
-    throw new Error('Failed to generate interview questions. Please try again.');
+    // Fallback: return static generic questions so interview doesn't break
+    console.warn('Using static fallback questions due to AI failure.');
+    return [
+      { text: `Describe your experience working as a ${role}. What have been your key responsibilities?`, type: 'behavioral', difficulty: 'medium' },
+      { text: `What technical skills do you consider your strongest for this ${role} position?`, type: 'technical', difficulty: 'medium' },
+      { text: 'Tell me about a challenging project you worked on. How did you overcome the obstacles?', type: 'behavioral', difficulty: 'medium' },
+      { text: `If you were to start a new project as a ${role}, how would you approach the initial architecture and planning?`, type: 'situational', difficulty: 'medium' },
+      { text: 'Where do you see yourself professionally in the next 3-5 years?', type: 'HR', difficulty: 'easy' },
+      { text: 'How do you stay current with industry trends and new technologies in your field?', type: 'technical', difficulty: 'easy' }
+    ];
   }
 }
 

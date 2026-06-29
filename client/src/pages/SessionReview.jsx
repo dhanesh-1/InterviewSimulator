@@ -6,7 +6,7 @@ import ScoreCircle from '../components/ui/ScoreCircle';
 import Badge from '../components/ui/Badge';
 import SpeechInput from '../components/SpeechInput';
 import { formatDate, getScoreColor } from '../utils/speechUtils';
-import { FiArrowLeft, FiClock, FiSend, FiMic, FiType, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiSearch, FiMic, FiEdit3, FiSend, FiType, FiX } from 'react-icons/fi';
 
 export default function SessionReview() {
   const { sessionId } = useParams();
@@ -82,7 +82,7 @@ export default function SessionReview() {
     return (
       <div className="page-container">
         <div className="empty-state">
-          <div className="empty-state-icon" aria-hidden="true">🔍</div>
+          <div className="empty-state-icon" aria-hidden="true"><FiSearch size={36} /></div>
           <h3>Session Not Found</h3>
           <p>This session may have been deleted or the link is incorrect.</p>
           <Link to="/dashboard" className="btn btn-primary" style={{ marginTop: '1rem' }}>
@@ -164,7 +164,10 @@ export default function SessionReview() {
               <>
                 <div className="review-answer">
                   <div className="review-answer-label">
-                    Your Answer {q.answeredVia === 'speech' ? '🎤' : '⌨️'}
+                    Your Answer {q.answeredVia === 'speech'
+                      ? <><FiMic size={12} style={{ verticalAlign: 'middle' }} /> Voice</>
+                      : <><FiEdit3 size={12} style={{ verticalAlign: 'middle' }} /> Typed</>
+                    }
                   </div>
                   <p>{q.userAnswer}</p>
                 </div>

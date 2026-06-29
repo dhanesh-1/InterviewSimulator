@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ErrorAlert from '../components/ui/ErrorAlert';
+import Logo from '../components/Logo';
 import { FiMail, FiLock, FiArrowLeft } from 'react-icons/fi';
 
 export default function Login() {
@@ -16,7 +17,12 @@ export default function Login() {
     setLoading(true);
     const success = await login(email, password);
     setLoading(false);
-    if (success) navigate('/dashboard');
+    if (success) {
+      // Read the stored user to determine role-based redirect
+      const stored = localStorage.getItem('user');
+      const userData = stored ? JSON.parse(stored) : null;
+      navigate(userData?.role === 'recruiter' ? '/recruiter/dashboard' : '/dashboard');
+    }
   };
 
   return (
@@ -28,7 +34,9 @@ export default function Login() {
           <FiArrowLeft size={14} /> Back to Home
         </Link>
 
-        <div className="auth-logo" aria-hidden="true">🎯</div>
+        <div className="auth-logo" aria-hidden="true">
+          <Logo height={32} />
+        </div>
         <div className="auth-header">
           <h1>Welcome Back</h1>
           <p>Sign in to continue your interview preparation</p>
