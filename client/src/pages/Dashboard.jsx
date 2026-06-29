@@ -8,7 +8,7 @@ import ScoreCircle from '../components/ui/ScoreCircle';
 import Badge from '../components/ui/Badge';
 import api from '../utils/api';
 import { formatDate } from '../utils/speechUtils';
-import { FiActivity, FiTarget, FiAward, FiTrendingUp, FiPlusCircle, FiClock, FiChevronRight } from 'react-icons/fi';
+import { FiActivity, FiTarget, FiAward, FiTrendingUp, FiPlusCircle, FiClock, FiChevronRight, FiMic } from 'react-icons/fi';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -72,7 +72,7 @@ export default function Dashboard() {
     <div className="page-container">
       <div className="dashboard-header">
         <h1>
-          Welcome back, <span>{user?.name?.split(' ')[0] || 'User'}</span> 👋
+          Welcome back, <span>{user?.name?.split(' ')[0] || 'User'}</span>
         </h1>
         <Link to="/interview/setup" className="btn btn-primary" id="new-interview-btn">
           <FiPlusCircle size={18} /> New Interview
@@ -119,7 +119,7 @@ export default function Dashboard() {
 
         {sessions.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon" aria-hidden="true">🎤</div>
+            <div className="empty-state-icon" aria-hidden="true"><FiMic size={36} /></div>
             <h3>No interviews yet</h3>
             <p>Start your first AI-powered interview to see your progress here.</p>
             <Link to="/interview/setup" className="btn btn-primary" style={{ marginTop: '1rem' }}>

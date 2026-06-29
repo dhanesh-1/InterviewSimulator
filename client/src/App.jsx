@@ -6,14 +6,21 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // ── Lazy-loaded pages ─────────────────────────────────────────────────────────
-const Home           = lazy(() => import('./pages/Home'));
-const Login          = lazy(() => import('./pages/Login'));
-const Signup         = lazy(() => import('./pages/Signup'));
-const Dashboard      = lazy(() => import('./pages/Dashboard'));
-const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
-const InterviewSession = lazy(() => import('./pages/InterviewSession'));
-const SessionReview  = lazy(() => import('./pages/SessionReview'));
-const Profile        = lazy(() => import('./pages/Profile'));
+const Home              = lazy(() => import('./pages/Home'));
+const Login             = lazy(() => import('./pages/Login'));
+const Signup            = lazy(() => import('./pages/Signup'));
+const Dashboard         = lazy(() => import('./pages/Dashboard'));
+const InterviewSetup    = lazy(() => import('./pages/InterviewSetup'));
+const InterviewSession  = lazy(() => import('./pages/InterviewSession'));
+const SessionReview     = lazy(() => import('./pages/SessionReview'));
+const Profile           = lazy(() => import('./pages/Profile'));
+
+// ── Candidate: Job Board pages ────────────────────────────────────────────────
+const JobBoard          = lazy(() => import('./pages/jobs/JobBoard'));
+const JobDetail         = lazy(() => import('./pages/jobs/JobDetail'));
+const MyApplications    = lazy(() => import('./pages/jobs/MyApplications'));
+
+
 
 // ── Page-level suspense fallback ──────────────────────────────────────────────
 function PageLoader() {
@@ -36,11 +43,30 @@ function useThemeInit() {
 
 // ── Inner layout (needs AuthContext) ─────────────────────────────────────────
 function AppLayout({ theme, setTheme }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isRecruiter } = useAuth();
 
   if (loading) {
-    return <LoadingSpinner size="xl" label="Loading InterviewAI..." center />;
+    return <LoadingSpinner size="xl" label="Loading HireReady..." center />;
   }
+
+  const defaultDash = '/dashboard';
+
+  // Helper: wraps route with Navbar (any logged-in user)
+  const withNav = (element) => (
+    <ProtectedRoute>
+      <Navbar theme={theme} setTheme={setTheme} />
+      {element}
+    </ProtectedRoute>
+  );
+
+  // Helper: candidate-only routes
+  const candidateOnly = (element) => (
+    <ProtectedRoute requiredRole="candidate">
+      <Navbar theme={theme} setTheme={setTheme} />
+      {element}
+    </ProtectedRoute>
+  );
+
 
   return (
     <>
@@ -48,54 +74,25 @@ function AppLayout({ theme, setTheme }) {
       <div className="app-container">
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Public routes */}
-            <Route
-              path="/"
-              element={user ? <Navigate to="/dashboard" replace /> : <Home />}
-            />
-            <Route
-              path="/login"
-              element={user ? <Navigate to="/dashboard" replace /> : <Login />}
-            />
-            <Route
-              path="/signup"
-              element={user ? <Navigate to="/dashboard" replace /> : <Signup />}
-            />
+            {/* ── Public routes ── */}
+            <Route path="/"       element={user ? <Navigate to={defaultDash} replace /> : <Home theme={theme} setTheme={setTheme} />} />
+            <Route path="/login"  element={user ? <Navigate to={defaultDash} replace /> : <Login />} />
+            <Route path="/signup" element={user ? <Navigate to={defaultDash} replace /> : <Signup />} />
 
-            {/* Protected routes with Navbar */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Navbar theme={theme} setTheme={setTheme} />
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/interview/setup" element={
-              <ProtectedRoute>
-                <Navbar theme={theme} setTheme={setTheme} />
-                <InterviewSetup />
-              </ProtectedRoute>
-            } />
-            <Route path="/interview/:sessionId" element={
-              <ProtectedRoute>
-                <Navbar theme={theme} setTheme={setTheme} />
-                <InterviewSession />
-              </ProtectedRoute>
-            } />
-            <Route path="/session/:sessionId" element={
-              <ProtectedRoute>
-                <Navbar theme={theme} setTheme={setTheme} />
-                <SessionReview />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Navbar theme={theme} setTheme={setTheme} />
-                <Profile />
-              </ProtectedRoute>
-            } />
+            {/* ── Shared protected ── */}
+            <Route path="/profile"                  element={withNav(<Profile />)} />
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} />
+            {/* ── Candidate-only routes ── */}
+            <Route path="/dashboard"                element={candidateOnly(<Dashboard />)} />
+            <Route path="/interview/setup"          element={candidateOnly(<InterviewSetup />)} />
+            <Route path="/interview/:sessionId"     element={candidateOnly(<InterviewSession />)} />
+            <Route path="/session/:sessionId"       element={candidateOnly(<SessionReview />)} />
+            <Route path="/jobs"                     element={candidateOnly(<JobBoard />)} />
+            <Route path="/jobs/:jobId"              element={candidateOnly(<JobDetail />)} />
+            <Route path="/my-applications"          element={candidateOnly(<MyApplications />)} />
+
+            {/* ── Fallback ── */}
+            <Route path="*" element={<Navigate to={user ? defaultDash : '/'} replace />} />
           </Routes>
         </Suspense>
       </div>

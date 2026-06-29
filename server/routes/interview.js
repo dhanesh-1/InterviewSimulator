@@ -3,6 +3,7 @@ const auth = require('../middleware/auth');
 const Session = require('../models/Session');
 const Resume = require('../models/Resume');
 const User = require('../models/User');
+const Application = require('../models/Application');
 const { generateQuestions } = require('../services/openai');
 const { evaluateSingleAnswer, calculateSessionScore, getAdaptiveDifficulty } = require('../services/evaluator');
 const { isTechnicalRole } = require('../utils/validation');
@@ -175,6 +176,14 @@ router.post('/complete', auth, async (req, res) => {
     user.totalSessions = completedSessions;
     user.averageScore = avgScore;
     await user.save();
+
+    // Update linked application to 'completed' if one exists
+    const linkedApp = await Application.findOne({ sessionId: session._id });
+    if (linkedApp) {
+      linkedApp.status = 'completed';
+      linkedApp.completedAt = new Date();
+      await linkedApp.save();
+    }
 
     res.json({
       sessionId: session._id,

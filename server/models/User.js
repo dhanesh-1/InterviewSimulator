@@ -23,6 +23,17 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
     select: false
   },
+  role: {
+    type: String,
+    enum: ['candidate', 'recruiter'],
+    default: 'candidate'
+  },
+  company: {
+    type: String,
+    trim: true,
+    maxlength: 100,
+    default: ''
+  },
   totalSessions: {
     type: Number,
     default: 0

@@ -1,15 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiHome, FiPlusCircle, FiUser, FiLogOut, FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi';
+import {
+  FiHome, FiPlusCircle, FiUser, FiLogOut, FiSun, FiMoon, FiMenu, FiX,
+  FiBriefcase, FiGrid, FiList, FiFileText
+} from 'react-icons/fi';
+import Logo from './Logo';
 
 export default function Navbar({ theme, setTheme }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isRecruiter } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const drawerRef = useRef(null);
 
   const isActive = (path) => location.pathname === path ? 'active' : '';
+  const isActivePrefix = (prefix) => location.pathname.startsWith(prefix) ? 'active' : '';
 
   // Close drawer on route change
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
@@ -18,9 +23,7 @@ export default function Navbar({ theme, setTheme }) {
   useEffect(() => {
     if (!mobileOpen) return;
     const handleClick = (e) => {
-      if (drawerRef.current && !drawerRef.current.contains(e.target)) {
-        setMobileOpen(false);
-      }
+      if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileOpen(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -35,30 +38,44 @@ export default function Navbar({ theme, setTheme }) {
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
-  const navLinks = [
-    { to: '/dashboard',      icon: <FiHome size={16} />,       label: 'Dashboard' },
-    { to: '/interview/setup', icon: <FiPlusCircle size={16} />, label: 'New Interview' },
-    { to: '/profile',        icon: <FiUser size={16} />,       label: 'Profile' },
-  ];
+  // Role-based navigation links
+  const navLinks = isRecruiter
+    ? [
+        { to: '/recruiter/dashboard', icon: <FiGrid size={16} />,     label: 'Dashboard', activeCheck: () => isActive('/recruiter/dashboard') },
+        { to: '/recruiter/post-job',  icon: <FiPlusCircle size={16} />, label: 'Post a Job', activeCheck: () => isActive('/recruiter/post-job') },
+        { to: '/recruiter/listings',  icon: <FiList size={16} />,     label: 'My Listings', activeCheck: () => isActivePrefix('/recruiter/listings') },
+        { to: '/profile',             icon: <FiUser size={16} />,     label: 'Profile',    activeCheck: () => isActive('/profile') },
+      ]
+    : [
+        { to: '/dashboard',       icon: <FiHome size={16} />,       label: 'Dashboard',        activeCheck: () => isActive('/dashboard') },
+        { to: '/jobs',            icon: <FiBriefcase size={16} />,  label: 'Browse Jobs',      activeCheck: () => isActivePrefix('/jobs') },
+        { to: '/my-applications', icon: <FiFileText size={16} />,   label: 'My Applications',  activeCheck: () => isActive('/my-applications') },
+        { to: '/interview/setup', icon: <FiPlusCircle size={16} />, label: 'Practice',         activeCheck: () => isActive('/interview/setup') },
+        { to: '/profile',         icon: <FiUser size={16} />,       label: 'Profile',          activeCheck: () => isActive('/profile') },
+      ];
+
+  const brandLink = isRecruiter ? '/recruiter/dashboard' : '/dashboard';
 
   return (
     <>
       <nav className="navbar" role="navigation" aria-label="App navigation">
         <div className="navbar-inner">
           {/* Brand */}
-          <Link to="/dashboard" className="navbar-brand" aria-label="InterviewAI Dashboard">
-            <div className="navbar-brand-icon" aria-hidden="true">🎯</div>
-            InterviewAI
+          <Link to={brandLink} className="navbar-brand" aria-label="HireReady">
+            <Logo height={32} />
+            {isRecruiter && (
+              <span className="navbar-role-badge recruiter-badge">Recruiter</span>
+            )}
           </Link>
 
           {/* Desktop Links */}
           <div className="navbar-links" role="list">
-            {navLinks.map(({ to, icon, label }) => (
+            {navLinks.map(({ to, icon, label, activeCheck }) => (
               <Link
                 key={to}
                 to={to}
-                className={`navbar-link ${isActive(to)}`}
-                aria-current={isActive(to) ? 'page' : undefined}
+                className={`navbar-link ${activeCheck()}`}
+                aria-current={activeCheck() ? 'page' : undefined}
                 role="listitem"
               >
                 {icon} {label}
@@ -85,12 +102,7 @@ export default function Navbar({ theme, setTheme }) {
             </div>
 
             {/* Logout (desktop) */}
-            <button
-              className="btn-logout"
-              onClick={logout}
-              aria-label="Log out"
-              type="button"
-            >
+            <button className="btn-logout" onClick={logout} aria-label="Log out" type="button">
               <FiLogOut size={14} /> Logout
             </button>
 
@@ -121,23 +133,18 @@ export default function Navbar({ theme, setTheme }) {
       >
         <div className="mobile-drawer-header">
           <span className="mobile-drawer-title">Menu</span>
-          <button
-            className="btn-icon-ghost"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-            type="button"
-          >
+          <button className="btn-icon-ghost" onClick={() => setMobileOpen(false)} aria-label="Close menu" type="button">
             <FiX size={20} />
           </button>
         </div>
 
         <nav className="mobile-drawer-links" role="list">
-          {navLinks.map(({ to, icon, label }) => (
+          {navLinks.map(({ to, icon, label, activeCheck }) => (
             <Link
               key={to}
               to={to}
-              className={`mobile-drawer-link ${isActive(to)}`}
-              aria-current={isActive(to) ? 'page' : undefined}
+              className={`mobile-drawer-link ${activeCheck()}`}
+              aria-current={activeCheck() ? 'page' : undefined}
               role="listitem"
             >
               {icon} {label}
@@ -155,12 +162,7 @@ export default function Navbar({ theme, setTheme }) {
             {theme === 'dark' ? <FiSun size={16} /> : <FiMoon size={16} />}
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </button>
-          <button
-            className="btn-logout"
-            onClick={logout}
-            aria-label="Log out"
-            type="button"
-          >
+          <button className="btn-logout" onClick={logout} aria-label="Log out" type="button">
             <FiLogOut size={14} /> Logout
           </button>
         </div>
@@ -168,11 +170,7 @@ export default function Navbar({ theme, setTheme }) {
 
       {/* Overlay */}
       {mobileOpen && (
-        <div
-          className="mobile-overlay"
-          onClick={() => setMobileOpen(false)}
-          aria-hidden="true"
-        />
+        <div className="mobile-overlay" onClick={() => setMobileOpen(false)} aria-hidden="true" />
       )}
     </>
   );

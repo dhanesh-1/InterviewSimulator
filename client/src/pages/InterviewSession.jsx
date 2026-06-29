@@ -8,13 +8,16 @@ import Badge from '../components/ui/Badge';
 import { speakText, stopSpeaking, getScoreColor } from '../utils/speechUtils';
 import {
   FiMic, FiEdit3, FiVolume2, FiVolumeX, FiSend, FiArrowRight,
-  FiCheckCircle, FiHome, FiEye,
+  FiCheckCircle, FiHome, FiEye, FiAlertTriangle, FiMessageSquare, FiZap,
 } from 'react-icons/fi';
 
 export default function InterviewSession() {
   const { sessionId } = useParams();
   const location      = useLocation();
   const navigate      = useNavigate();
+
+  // If this session was started via a job application, receive applicationId
+  const applicationId = location.state?.applicationId || null;
 
   const [session,      setSession]      = useState(location.state?.session || null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,9 +30,24 @@ export default function InterviewSession() {
   const [loading,      setLoading]      = useState(!location.state?.session);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [submitError,  setSubmitError]  = useState('');
+  const [tabWarning,   setTabWarning]   = useState(false);
 
-  const submitRef      = useRef(false);   // prevent duplicate submits
-  const questionRef    = useRef(null);    // for focus management
+  const submitRef   = useRef(false);  // prevent duplicate submits
+  const questionRef = useRef(null);   // for focus management
+  const tabCountRef = useRef(0);      // anti-cheat tab switch counter
+
+  // ── Anti-cheat: tab switch detection (only for job-linked interviews) ─────────
+  useEffect(() => {
+    if (!applicationId) return;
+    const onBlur = () => {
+      tabCountRef.current += 1;
+      setTabWarning(true);
+      // Report to backend (fire and forget)
+      api.patch(`/applications/${applicationId}/flags`, { tabSwitchCount: tabCountRef.current }).catch(() => {});
+    };
+    window.addEventListener('blur', onBlur);
+    return () => window.removeEventListener('blur', onBlur);
+  }, [applicationId]);
 
   // ── Load session if navigated directly ──────────────────────────────────────
   useEffect(() => {
@@ -156,7 +174,7 @@ export default function InterviewSession() {
     return (
       <div className="page-container">
         <div className="glass-card session-complete" style={{ maxWidth: 600, margin: '3rem auto', textAlign: 'center' }}>
-          <div className="complete-icon" aria-hidden="true">🎉</div>
+          <div className="complete-icon" aria-hidden="true"><FiCheckCircle size={48} color="var(--accent-emerald)" /></div>
           <h1 style={{ fontSize: 'var(--font-3xl)', fontWeight: 700, marginBottom: '0.5rem' }}>
             Interview Complete!
           </h1>
@@ -213,6 +231,14 @@ export default function InterviewSession() {
           {voiceEnabled ? <FiVolume2 size={18} /> : <FiVolumeX size={18} />}
         </button>
       </div>
+
+      {/* ── Anti-cheat tab warning ── */}
+      {tabWarning && applicationId && (
+        <div className="anti-cheat-banner" role="alert" style={{ margin: '0 0 1rem' }}>
+          <FiAlertTriangle size={16} style={{ color: 'var(--accent-amber)', flexShrink: 0 }} />
+          <span><strong>Warning:</strong> Tab switching detected ({tabCountRef.current} time{tabCountRef.current > 1 ? 's' : ''}). This is recorded and visible to the recruiter. Please stay on this page.</span>
+        </div>
+      )}
 
       <div className="interview-layout">
         {/* ── Question Panel ── */}
@@ -349,13 +375,13 @@ export default function InterviewSession() {
               </div>
 
               <div className="feedback-text">
-                <h3>💬 Feedback</h3>
+                <h3><FiMessageSquare size={15} style={{ verticalAlign: 'middle', marginRight: '0.35rem' }} />Feedback</h3>
                 <p>{feedback.feedback}</p>
               </div>
 
               {feedback.suggestions?.length > 0 && (
                 <div className="feedback-text">
-                  <h3>💡 Suggestions</h3>
+                  <h3><FiZap size={15} style={{ verticalAlign: 'middle', marginRight: '0.35rem' }} />Suggestions</h3>
                   <ul className="suggestions-list" role="list">
                     {feedback.suggestions.map((sug, i) => (
                       <li key={i} className="suggestion-item" role="listitem">

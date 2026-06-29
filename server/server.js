@@ -6,27 +6,31 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const connectDB = require('./config/db');
 
 // Route imports
-const authRoutes = require('./routes/auth');
-const resumeRoutes = require('./routes/resume');
-const interviewRoutes = require('./routes/interview');
-const sessionRoutes = require('./routes/sessions');
+const authRoutes        = require('./routes/auth');
+const resumeRoutes      = require('./routes/resume');
+const interviewRoutes   = require('./routes/interview');
+const sessionRoutes     = require('./routes/sessions');
+const jobRoutes         = require('./routes/jobs');
+const applicationRoutes = require('./routes/applications');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/resume', resumeRoutes);
-app.use('/api/interview', interviewRoutes);
-app.use('/api/sessions', sessionRoutes);
+app.use('/api/auth',         authRoutes);
+app.use('/api/resume',       resumeRoutes);
+app.use('/api/interview',    interviewRoutes);
+app.use('/api/sessions',     sessionRoutes);
+app.use('/api/jobs',         jobRoutes);
+app.use('/api/applications', applicationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

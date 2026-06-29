@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom';
 import {
   FiZap, FiMic, FiBarChart2, FiTarget, FiFileText, FiTrendingUp,
   FiArrowRight, FiCheckCircle, FiCode, FiStar, FiShield, FiUsers,
-  FiGithub, FiTwitter, FiLinkedin,
+  FiGithub, FiTwitter, FiLinkedin, FiSun, FiMoon,
 } from 'react-icons/fi';
+import Logo from '../components/Logo';
 
 /* ── Supported technical roles shown in the landing page ── */
 const SUPPORTED_ROLES = [
@@ -85,7 +86,7 @@ const WHY_ITEMS = [
   { icon: <FiCode size={20} />, text: 'Questions tailored to your exact tech stack and experience' },
 ];
 
-export default function Home() {
+export default function Home({ theme, setTheme }) {
   return (
     <div className="home-page">
       {/* ── Animated Background Orbs ── */}
@@ -94,9 +95,8 @@ export default function Home() {
       {/* ── Top Navigation ── */}
       <nav className="home-nav" role="navigation" aria-label="Main navigation">
         <div className="home-nav-inner">
-          <Link to="/" className="navbar-brand" aria-label="InterviewAI Home">
-            <div className="navbar-brand-icon">🎯</div>
-            InterviewAI
+          <Link to="/" className="navbar-brand" aria-label="HireReady Home">
+            <Logo height={32} />
           </Link>
           <div className="home-nav-links">
             <a href="#features" className="home-nav-link">Features</a>
@@ -104,6 +104,16 @@ export default function Home() {
             <a href="#roles" className="home-nav-link">Roles</a>
           </div>
           <div className="home-nav-cta">
+            <button
+              className="btn-icon-ghost"
+              onClick={() => setTheme && setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              type="button"
+              style={{ marginRight: '0.25rem' }}
+            >
+              {theme === 'dark' ? <FiSun size={18} /> : <FiMoon size={18} />}
+            </button>
             <Link to="/login" className="btn btn-secondary btn-sm" id="home-login-btn">Sign In</Link>
             <Link to="/signup" className="btn btn-primary btn-sm" id="home-signup-btn">Get Started Free</Link>
           </div>
@@ -180,7 +190,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="mockup-answer-box">
-                <div className="mockup-answer-label">Your Answer (Voice Active 🎤)</div>
+                <div className="mockup-answer-label">Your Answer (Voice Active)</div>
                 <p className="mockup-answer-text">
                   Both hooks memoize values to prevent unnecessary re-renders. 
                   useMemo returns a computed value, while useCallback returns a memoized function...
@@ -386,9 +396,8 @@ export default function Home() {
       <footer className="home-footer" role="contentinfo">
         <div className="footer-inner">
           <div className="footer-brand">
-            <Link to="/" className="navbar-brand footer-logo" aria-label="InterviewAI">
-              <div className="navbar-brand-icon">🎯</div>
-              InterviewAI
+            <Link to="/" className="navbar-brand footer-logo" aria-label="HireReady">
+              <Logo height={32} />
             </Link>
             <p className="footer-tagline">
               AI-powered technical interview preparation — built for engineers, by engineers.

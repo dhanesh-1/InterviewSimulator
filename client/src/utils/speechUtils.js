@@ -18,7 +18,8 @@ export function speakText(text, onEnd = null) {
   // Try to use a natural-sounding voice
   const voices = window.speechSynthesis.getVoices();
   const preferred = voices.find(v =>
-    v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha')
+    // v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha')
+    v.name.includes('Samantha')
   );
   if (preferred) utterance.voice = preferred;
 

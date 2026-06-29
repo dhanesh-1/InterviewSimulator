@@ -5,10 +5,23 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// ── Helper: build safe user payload ──────────────────────────────────────────
+function userPayload(user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    company: user.company || '',
+    totalSessions: user.totalSessions,
+    averageScore: user.averageScore
+  };
+}
+
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role, company } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required.' });
@@ -18,26 +31,30 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     }
 
+    const validRoles = ['candidate', 'recruiter'];
+    const userRole = validRoles.includes(role) ? role : 'candidate';
+
+    if (userRole === 'recruiter' && !company?.trim()) {
+      return res.status(400).json({ error: 'Company name is required for recruiter accounts.' });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: 'An account with this email already exists.' });
     }
 
-    const user = new User({ name, email, password });
+    const user = new User({
+      name,
+      email,
+      password,
+      role: userRole,
+      company: userRole === 'recruiter' ? company.trim() : ''
+    });
     await user.save();
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        totalSessions: user.totalSessions,
-        averageScore: user.averageScore
-      }
-    });
+    res.status(201).json({ token, user: userPayload(user) });
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ error: 'Server error during signup.' });
@@ -65,16 +82,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        totalSessions: user.totalSessions,
-        averageScore: user.averageScore
-      }
-    });
+    res.json({ token, user: userPayload(user) });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Server error during login.' });
@@ -88,15 +96,7 @@ router.get('/me', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
-
-    res.json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      totalSessions: user.totalSessions,
-      averageScore: user.averageScore,
-      createdAt: user.createdAt
-    });
+    res.json({ ...userPayload(user), createdAt: user.createdAt });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Server error.' });
