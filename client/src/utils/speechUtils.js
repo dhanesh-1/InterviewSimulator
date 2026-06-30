@@ -19,7 +19,7 @@ export function speakText(text, onEnd = null) {
   const voices = window.speechSynthesis.getVoices();
   const preferred = voices.find(v =>
     v.name.includes('Samantha')
-
+    
   );
   if (preferred) utterance.voice = preferred;
 
