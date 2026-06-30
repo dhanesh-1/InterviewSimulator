@@ -123,7 +123,14 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ error: 'Session not found.' });
     }
 
-    res.json(session);
+    const sessionObj = session.toObject();
+    const Application = require('../models/Application');
+    const application = await Application.findOne({ sessionId: session._id });
+    if (application) {
+      sessionObj.applicationId = application._id;
+    }
+
+    res.json(sessionObj);
   } catch (error) {
     console.error('Get session error:', error);
     res.status(500).json({ error: 'Server error.' });

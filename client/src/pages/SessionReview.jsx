@@ -93,6 +93,22 @@ export default function SessionReview() {
     );
   }
 
+  // Hide feedback for job-linked sessions
+  if (session.applicationId) {
+    return (
+      <div className="page-container">
+        <div className="empty-state">
+          <div className="empty-state-icon" aria-hidden="true"><FiX size={36} color="var(--accent-red)" /></div>
+          <h3>Feedback Not Available</h3>
+          <p>This interview was completed as part of a job application. Detailed feedback is only visible to the recruiter.</p>
+          <Link to="/dashboard" className="btn btn-primary" style={{ marginTop: '1rem' }}>
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const answeredQuestions = session.questions?.filter((q) => q.userAnswer) || [];
   const strongCount       = answeredQuestions.filter((q) => q.evaluation?.overall >= 7).length;
 

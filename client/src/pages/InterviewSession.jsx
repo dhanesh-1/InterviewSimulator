@@ -19,7 +19,7 @@ export default function InterviewSession() {
   // If this session was started via a job application, receive applicationId
   const applicationId = location.state?.applicationId || null;
 
-  const [session,      setSession]      = useState(location.state?.session || null);
+  const [session,      setSession]      = useState(location.state?.session ? { ...location.state.session, applicationId } : null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answerMode,   setAnswerMode]   = useState('text');
   const [answer,       setAnswer]       = useState('');
@@ -36,18 +36,20 @@ export default function InterviewSession() {
   const questionRef = useRef(null);   // for focus management
   const tabCountRef = useRef(0);      // anti-cheat tab switch counter
 
+  const currentApplicationId = session?.applicationId || applicationId;
+
   // ── Anti-cheat: tab switch detection (only for job-linked interviews) ─────────
   useEffect(() => {
-    if (!applicationId) return;
+    if (!currentApplicationId) return;
     const onBlur = () => {
       tabCountRef.current += 1;
       setTabWarning(true);
       // Report to backend (fire and forget)
-      api.patch(`/applications/${applicationId}/flags`, { tabSwitchCount: tabCountRef.current }).catch(() => {});
+      api.patch(`/applications/${currentApplicationId}/flags`, { tabSwitchCount: tabCountRef.current }).catch(() => {});
     };
     window.addEventListener('blur', onBlur);
     return () => window.removeEventListener('blur', onBlur);
-  }, [applicationId]);
+  }, [currentApplicationId]);
 
   // ── Load session if navigated directly ──────────────────────────────────────
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function InterviewSession() {
           type:       q.type,
           difficulty: q.difficulty,
         })),
+        applicationId: data.applicationId || applicationId
       });
       setLoading(false);
     } catch (err) {
@@ -124,7 +127,17 @@ export default function InterviewSession() {
         answer:      answer.trim(),
         answeredVia: answerMode,
       });
-      setFeedback(res.data.evaluation);
+
+      if (currentApplicationId) {
+        setAnswer('');
+        if (currentIndex + 1 >= totalQuestions) {
+          completeSession();
+        } else {
+          setCurrentIndex((prev) => prev + 1);
+        }
+      } else {
+        setFeedback(res.data.evaluation);
+      }
     } catch (err) {
       const msg = err.response?.data?.error || 'Failed to evaluate answer. Please try again.';
       setSubmitError(msg);
@@ -178,30 +191,41 @@ export default function InterviewSession() {
           <h1 style={{ fontSize: 'var(--font-3xl)', fontWeight: 700, marginBottom: '0.5rem' }}>
             Interview Complete!
           </h1>
-          <div className="complete-score" aria-label={`Overall score: ${finalResult.overallScore?.toFixed(1)} out of 10`}>
-            {finalResult.overallScore?.toFixed(1)}/10
-          </div>
-          <div className="complete-label">Overall Score</div>
+          
+          {currentApplicationId ? (
+            <p style={{ margin: '1.5rem 0', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+              Thank you for completing the interview. Your responses have been submitted to the recruiter. We will be in touch with you soon regarding your application.
+            </p>
+          ) : (
+            <>
+              <div className="complete-score" aria-label={`Overall score: ${finalResult.overallScore?.toFixed(1)} out of 10`}>
+                {finalResult.overallScore?.toFixed(1)}/10
+              </div>
+              <div className="complete-label">Overall Score</div>
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', margin: '1.5rem 0' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 'var(--font-xl)', fontWeight: 700, color: 'var(--accent-blue)' }}>
-                {finalResult.questions?.length || 0}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', margin: '1.5rem 0' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 'var(--font-xl)', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                    {finalResult.questions?.length || 0}
+                  </div>
+                  <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Questions</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 'var(--font-xl)', fontWeight: 700, color: 'var(--accent-emerald)' }}>
+                    {strongCount}
+                  </div>
+                  <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Strong Answers</div>
+                </div>
               </div>
-              <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Questions</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 'var(--font-xl)', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-                {strongCount}
-              </div>
-              <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Strong Answers</div>
-            </div>
-          </div>
+            </>
+          )}
 
           <div className="complete-actions">
-            <Link to={`/session/${session.sessionId}`} className="btn btn-primary">
-              <FiEye size={18} aria-hidden="true" /> Review Answers
-            </Link>
+            {!currentApplicationId && (
+              <Link to={`/session/${session.sessionId}`} className="btn btn-primary">
+                <FiEye size={18} aria-hidden="true" /> Review Answers
+              </Link>
+            )}
             <Link to="/dashboard" className="btn btn-secondary">
               <FiHome size={18} aria-hidden="true" /> Dashboard
             </Link>
@@ -233,7 +257,7 @@ export default function InterviewSession() {
       </div>
 
       {/* ── Anti-cheat tab warning ── */}
-      {tabWarning && applicationId && (
+      {tabWarning && currentApplicationId && (
         <div className="anti-cheat-banner" role="alert" style={{ margin: '0 0 1rem' }}>
           <FiAlertTriangle size={16} style={{ color: 'var(--accent-amber)', flexShrink: 0 }} />
           <span><strong>Warning:</strong> Tab switching detected ({tabCountRef.current} time{tabCountRef.current > 1 ? 's' : ''}). This is recorded and visible to the recruiter. Please stay on this page.</span>
