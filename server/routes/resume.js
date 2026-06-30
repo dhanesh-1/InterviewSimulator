@@ -4,7 +4,7 @@ const path = require('path');
 const auth = require('../middleware/auth');
 const Resume = require('../models/Resume');
 const { extractText, cleanupFile } = require('../services/resumeParser');
-const { parseResumeWithAI } = require('../services/openai');
+const { parseResumeWithAI, analyzeATSWithAI } = require('../services/openai');
 
 const router = express.Router();
 
@@ -93,6 +93,50 @@ router.post('/upload', auth, upload.single('resume'), async (req, res) => {
     }
 
     res.status(500).json({ error: error.message || 'Failed to process resume.' });
+  }
+});
+
+// POST /api/resume/ats-score
+router.post('/ats-score', auth, upload.single('resume'), async (req, res) => {
+  let filePath = null;
+  try {
+    const jobDescription = req.body.jobDescription || '';
+    let resumeText = '';
+
+    if (req.file) {
+      filePath = req.file.path;
+      const originalName = req.file.originalname;
+
+      // Extract raw text
+      resumeText = await extractText(filePath, originalName);
+
+      if (!resumeText || resumeText.trim().length < 50) {
+        cleanupFile(filePath);
+        return res.status(400).json({ error: 'Could not extract enough text from the file. Please upload a valid resume.' });
+      }
+      cleanupFile(filePath);
+    } else {
+      // Get user's latest saved resume
+      const latestResume = await Resume.findOne({ userId: req.userId }).sort({ uploadedAt: -1 });
+
+      if (!latestResume) {
+        return res.status(400).json({ error: 'No resume found. Please upload a resume first or select a file.' });
+      }
+      resumeText = latestResume.rawText;
+    }
+
+    if (!resumeText || resumeText.trim().length < 50) {
+      return res.status(400).json({ error: 'Resume text is too brief or invalid.' });
+    }
+
+    // Call OpenAI service to evaluate ATS score and breakdown
+    const evaluation = await analyzeATSWithAI(resumeText, jobDescription);
+
+    res.json(evaluation);
+  } catch (error) {
+    if (filePath) cleanupFile(filePath);
+    console.error('ATS evaluation error:', error);
+    res.status(500).json({ error: error.message || 'Failed to analyze ATS score.' });
   }
 });
 

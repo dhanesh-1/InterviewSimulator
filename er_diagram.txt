@@ -1,0 +1,72 @@
+```mermaid
+erDiagram
+    USER {
+        objectId id PK
+        string name
+        string email
+        string password
+        string role "candidate | recruiter"
+        string company
+        int totalSessions
+        float averageScore
+        date createdAt
+        date updatedAt
+    }
+
+    RESUME {
+        objectId id PK
+        objectId userId FK
+        string originalName
+        string rawText
+        date uploadedAt
+    }
+
+    SESSION {
+        objectId id PK
+        objectId userId FK
+        objectId resumeId FK
+        string role
+        string difficulty
+        float overallScore
+        string status "in-progress | completed"
+        date startedAt
+        date completedAt
+    }
+
+    JOB {
+        objectId id PK
+        objectId recruiterId FK
+        string title
+        string company
+        string location
+        string type
+        string description
+        string[] requirements
+        string role
+        string difficulty
+        string status "open | closed | draft"
+        int applicantCount
+    }
+
+    APPLICATION {
+        objectId id PK
+        objectId jobId FK
+        objectId candidateId FK
+        objectId resumeId FK
+        objectId sessionId FK
+        string status "applied | interviewing | completed | shortlisted | rejected"
+        int tabSwitchCount
+        string recruiterNote
+        date appliedAt
+        date completedAt
+    }
+
+    USER ||--o{ RESUME : "uploads"
+    USER ||--o{ SESSION : "conducts"
+    USER ||--o{ JOB : "manages"
+    USER ||--o{ APPLICATION : "applies"
+    JOB ||--o{ APPLICATION : "has"
+    RESUME ||--o{ SESSION : "customizes"
+    RESUME ||--o{ APPLICATION : "used_by"
+    SESSION ||--o| APPLICATION : "tied_to"
+```

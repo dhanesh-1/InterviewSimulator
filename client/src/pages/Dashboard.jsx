@@ -8,14 +8,14 @@ import ScoreCircle from '../components/ui/ScoreCircle';
 import Badge from '../components/ui/Badge';
 import api from '../utils/api';
 import { formatDate } from '../utils/speechUtils';
-import { FiActivity, FiTarget, FiAward, FiTrendingUp, FiPlusCircle, FiClock, FiChevronRight, FiMic } from 'react-icons/fi';
+import { FiActivity, FiTarget, FiAward, FiTrendingUp, FiPlusCircle, FiClock, FiChevronRight, FiMic, FiFileText } from 'react-icons/fi';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [stats, setStats]     = useState(null);
+  const [stats, setStats] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => { loadDashboard(); }, []);
 
@@ -46,22 +46,22 @@ export default function Dashboard() {
 
   const statCards = [
     {
-      icon:  <FiActivity size={22} />,
+      icon: <FiActivity size={22} />,
       value: stats?.totalSessions ?? 0,
       label: 'Total Sessions',
     },
     {
-      icon:  <FiTarget size={22} />,
+      icon: <FiTarget size={22} />,
       value: stats?.averageScore?.toFixed(1) ?? '0.0',
       label: 'Average Score',
     },
     {
-      icon:  <FiAward size={22} />,
+      icon: <FiAward size={22} />,
       value: stats?.bestScore?.toFixed(1) ?? '0.0',
       label: 'Best Score',
     },
     {
-      icon:  <FiTrendingUp size={22} />,
+      icon: <FiTrendingUp size={22} />,
       value: `${stats?.recentTrend > 0 ? '+' : ''}${stats?.recentTrend?.toFixed(1) ?? '0.0'}`,
       label: 'Recent Trend',
       trend: stats?.recentTrend,
@@ -74,9 +74,14 @@ export default function Dashboard() {
         <h1>
           Welcome back, <span>{user?.name?.split(' ')[0] || 'User'}</span>
         </h1>
-        <Link to="/interview/setup" className="btn btn-primary" id="new-interview-btn">
-          <FiPlusCircle size={18} /> New Interview
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Link to="/ats-checker" className="btn btn-secondary" id="ats-checker-btn">
+            <FiFileText size={18} /> ATS Checker
+          </Link>
+          <Link to="/interview/setup" className="btn btn-primary" id="new-interview-btn">
+            <FiPlusCircle size={18} /> New Interview
+          </Link>
+        </div>
       </div>
 
       <ErrorAlert message={error} onDismiss={() => setError('')} style={{ marginBottom: '1.5rem' }} />

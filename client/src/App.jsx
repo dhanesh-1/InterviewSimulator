@@ -6,19 +6,20 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // ── Lazy-loaded pages ─────────────────────────────────────────────────────────
-const Home              = lazy(() => import('./pages/Home'));
-const Login             = lazy(() => import('./pages/Login'));
-const Signup            = lazy(() => import('./pages/Signup'));
-const Dashboard         = lazy(() => import('./pages/Dashboard'));
-const InterviewSetup    = lazy(() => import('./pages/InterviewSetup'));
-const InterviewSession  = lazy(() => import('./pages/InterviewSession'));
-const SessionReview     = lazy(() => import('./pages/SessionReview'));
-const Profile           = lazy(() => import('./pages/Profile'));
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
+const InterviewSession = lazy(() => import('./pages/InterviewSession'));
+const SessionReview = lazy(() => import('./pages/SessionReview'));
+const Profile = lazy(() => import('./pages/Profile'));
+const ResumeATS = lazy(() => import('./pages/ResumeATS'));
 
 // ── Candidate: Job Board pages ────────────────────────────────────────────────
-const JobBoard          = lazy(() => import('./pages/jobs/JobBoard'));
-const JobDetail         = lazy(() => import('./pages/jobs/JobDetail'));
-const MyApplications    = lazy(() => import('./pages/jobs/MyApplications'));
+const JobBoard = lazy(() => import('./pages/jobs/JobBoard'));
+const JobDetail = lazy(() => import('./pages/jobs/JobDetail'));
+const MyApplications = lazy(() => import('./pages/jobs/MyApplications'));
 
 
 
@@ -75,21 +76,22 @@ function AppLayout({ theme, setTheme }) {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* ── Public routes ── */}
-            <Route path="/"       element={user ? <Navigate to={defaultDash} replace /> : <Home theme={theme} setTheme={setTheme} />} />
-            <Route path="/login"  element={user ? <Navigate to={defaultDash} replace /> : <Login />} />
+            <Route path="/" element={user ? <Navigate to={defaultDash} replace /> : <Home theme={theme} setTheme={setTheme} />} />
+            <Route path="/login" element={user ? <Navigate to={defaultDash} replace /> : <Login />} />
             <Route path="/signup" element={user ? <Navigate to={defaultDash} replace /> : <Signup />} />
 
             {/* ── Shared protected ── */}
-            <Route path="/profile"                  element={withNav(<Profile />)} />
+            <Route path="/profile" element={withNav(<Profile />)} />
 
             {/* ── Candidate-only routes ── */}
-            <Route path="/dashboard"                element={candidateOnly(<Dashboard />)} />
-            <Route path="/interview/setup"          element={candidateOnly(<InterviewSetup />)} />
-            <Route path="/interview/:sessionId"     element={candidateOnly(<InterviewSession />)} />
-            <Route path="/session/:sessionId"       element={candidateOnly(<SessionReview />)} />
-            <Route path="/jobs"                     element={candidateOnly(<JobBoard />)} />
-            <Route path="/jobs/:jobId"              element={candidateOnly(<JobDetail />)} />
-            <Route path="/my-applications"          element={candidateOnly(<MyApplications />)} />
+            <Route path="/dashboard" element={candidateOnly(<Dashboard />)} />
+            <Route path="/interview/setup" element={candidateOnly(<InterviewSetup />)} />
+            <Route path="/interview/:sessionId" element={candidateOnly(<InterviewSession />)} />
+            <Route path="/session/:sessionId" element={candidateOnly(<SessionReview />)} />
+            <Route path="/jobs" element={candidateOnly(<JobBoard />)} />
+            <Route path="/jobs/:jobId" element={candidateOnly(<JobDetail />)} />
+            <Route path="/my-applications" element={candidateOnly(<MyApplications />)} />
+            <Route path="/ats-checker" element={candidateOnly(<ResumeATS />)} />
 
             {/* ── Fallback ── */}
             <Route path="*" element={<Navigate to={user ? defaultDash : '/'} replace />} />

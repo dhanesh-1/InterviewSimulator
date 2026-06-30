@@ -202,4 +202,79 @@ If any section is not found in the resume, use empty arrays or empty strings. Be
   }
 }
 
-module.exports = { generateQuestions, evaluateAnswer, parseResumeWithAI };
+/**
+ * Analyze resume against ATS criteria and optional job description
+ */
+async function analyzeATSWithAI(resumeText, jobDescription = '') {
+  const jobContext = jobDescription
+    ? `\nTARGET JOB DESCRIPTION:\n"""\n${jobDescription.substring(0, 3000)}\n"""\n`
+    : '';
+
+  const prompt = `You are an expert Applicant Tracking System (ATS) and professional resume reviewer.
+Analyze the following resume text and evaluate its ATS compatibility, formatting, and content strength.
+If a Job Description is provided below, compare the resume to the job description and evaluate how well the candidate matches the requirements, highlighting key matching and missing keywords/skills.
+
+RESUME TEXT:
+"""
+${resumeText.substring(0, 8000)}
+"""
+${jobContext}
+
+Perform a rigorous ATS scan and evaluation. Return ONLY a valid JSON object with the following structure (do not include any markdown backticks, prefix text, or conversational text - it must parse directly as JSON):
+{
+  "score": 78,
+  "breakdown": {
+    "formatting": 85,
+    "keywords": 70,
+    "impact": 80
+  },
+  "improvements": [
+    {
+      "category": "Formatting & Structure",
+      "issue": "Brief description of the problem",
+      "suggestion": "Detailed, specific, actionable suggestion on how to fix this issue."
+    }
+  ],
+  "matchedKeywords": ["react", "javascript"],
+  "missingKeywords": ["aws", "typescript"]
+}
+
+Ensure the feedback is highly detailed, realistic, and specific to the provided text. If no Job Description is provided, evaluate the resume based on general best practices for technical roles. Each category of improvement must be one of: "Formatting & Structure", "Keywords & Optimization", "Experience Impact".`;
+
+  try {
+    let text = await generateText(prompt);
+    const startIndex = text.indexOf('{');
+    const endIndex = text.lastIndexOf('}');
+    if (startIndex !== -1 && endIndex !== -1) {
+      text = text.substring(startIndex, endIndex + 1);
+    }
+
+    const evaluation = JSON.parse(text);
+    return evaluation;
+  } catch (error) {
+    if (error.status === 429) {
+      throw new Error('API Quota Exceeded. Please try again soon.');
+    }
+    console.error('OpenAI analyzeATS error:', error);
+    return {
+      score: 65,
+      breakdown: { formatting: 70, keywords: 60, impact: 65 },
+      improvements: [
+        {
+          category: 'Formatting & Structure',
+          issue: 'Resume lacks detail or structure due to parsing fallback.',
+          suggestion: 'Ensure your resume uses standard section headings (Experience, Skills, Education) and clear bullet points.'
+        },
+        {
+          category: 'Keywords & Optimization',
+          issue: 'Unable to perform full keyword match with AI currently.',
+          suggestion: 'Tailor your resume skills and experience bullets to match terms used in your target job description.'
+        }
+      ],
+      matchedKeywords: [],
+      missingKeywords: []
+    };
+  }
+}
+
+module.exports = { generateQuestions, evaluateAnswer, parseResumeWithAI, analyzeATSWithAI };
